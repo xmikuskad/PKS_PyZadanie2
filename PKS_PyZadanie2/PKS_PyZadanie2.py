@@ -13,7 +13,7 @@ lsap_types = list()
 tcp_types = list()
 udp_types = list()
 
-arp_list = list()
+arp_list = []
 
 class DatalinkLayerProtocols:
     def __init__(self, value, name):
@@ -33,18 +33,19 @@ class TcpUdpProtocols:
         self.name = name
 
 class ArpInfo:
-    def __init__(self,srcIp,dstIp,macAddr,order):
-        self.scrIp = srcIp
+    def __init__(self,srcIp,dstIp,srcMac,dstMac,order):
+        self.srcIp = srcIp
         self.dstIp = dstIp
-        self.macAddr - macAddr
+        self.srcMac = srcMac
+        self.dstMac = dstMac
         self.order = order
 
 class ArpCommunication:
     def __init__(self,ip):
         self.ip = ip
-
-    requests = list()
-    replies = list()
+        self.completed = False
+        self.ARPrequests = list()
+        self.ARPreplies = list()
 
 def add_ip(ipInc):
     i=0
@@ -198,9 +199,36 @@ def unpack_pup(raw_data,iterator):
 
 def unpack_arp(raw_data,iterator):
     print('ARP')
-    print('{}'.format(iterator))
     tmp,operation,srcMac,srcIp,dstMac,dstIp = struct.unpack('! 6s H 6s 4s 6s 4s',raw_data[:28])
-    print('operation {}, srcMac {}, srcIP {}, dstMac {}, dstIp {}'.format(operation,create_mac(srcMac),format_ip(srcIp),create_mac(dstMac),format_ip(dstIp)))
+    #print('operation {}, srcMac {}, srcIP {}, dstMac {}, dstIp {}'.format(operation,create_mac(srcMac),format_ip(srcIp),create_mac(dstMac),format_ip(dstIp)))
+
+    index = 0
+    while index<len(arp_list):
+        if operation == 1 and arp_list[index].completed == False and arp_list[index].ip == format_ip(dstIp):
+            info = ArpInfo(format_ip(srcIp),format_ip(dstIp),create_mac(srcMac),create_mac(dstMac),iterator)
+            arp_list[index].ARPrequests.append(info)
+            if len(arp_list[index].ARPreplies) > 0:
+                arp_list[index].completed = True
+            return
+
+        elif operation == 2 and arp_list[index].completed == False and arp_list[index].ip == format_ip(srcIp):
+            info = ArpInfo(format_ip(srcIp),format_ip(dstIp),create_mac(srcMac),create_mac(dstMac),iterator)
+            arp_list[index].ARPreplies.append(info)
+            if len(arp_list[index].ARPrequests) > 0:
+                arp_list[index].completed = True
+            return
+        index+=1
+
+
+    if operation == 1:
+        newArp = ArpCommunication(format_ip(dstIp))
+        newArp.ARPrequests.append(ArpInfo(format_ip(srcIp),format_ip(dstIp),create_mac(srcMac),create_mac(dstMac),iterator))
+        arp_list.append(newArp)
+    elif operation == 2:
+        newArp = ArpCommunication(format_ip(srcIp))
+        newArp.ARPreplies.append(ArpInfo(format_ip(srcIp),format_ip(dstIp),create_mac(srcMac),create_mac(dstMac),iterator))
+        arp_list.append(newArp)
+
 
 def unpack_x75internet(raw_data,iterator):
     print('X.75 Internet')
@@ -367,6 +395,39 @@ def unpack_ethernet(raw_data,iterator):
             print('Nenasiel som prislusny protokol {} v zozname'.format(llcType))
 
 
+def check_arp(skipper):
+    counter = 1
+    info_shown = False
+
+    for item in arp_list:
+
+        if item.completed == skipper:
+            continue
+
+        if info_shown == False:
+            info_shown = True
+            if skipper == True:
+                print("Neuplne ARP komunikacie\n")
+            else:
+                print('Uplne ARP komunikacie\n')
+
+        if item.completed == True:
+            print('Komunikacia {}'.format(counter))
+            counter+=1
+
+        if len(item.ARPrequests) > 0:
+            print('ARP-Request, IP adresa {}, MAC adresa: ???'.format(item.ip))
+            for request in item.ARPrequests:
+                print('{} Zdrojova IP: {}, Cielova IP: {}'.format(request.order,request.srcIp,request.dstIp))
+
+        print('')
+
+        if len(item.ARPreplies) > 0:
+            print('ARP-Reply, IP adresa {}, MAC adresa: {}'.format(item.ip,item.ARPreplies[0].srcMac))
+            for reply in item.ARPreplies:
+                print('{} Zdrojova IP: {}, Cielova IP: {}'.format(reply.order,reply.srcIp,reply.dstIp))
+
+    print('\n')
 
 def print_frame(raw_data):
     length = len(raw_data)
@@ -408,7 +469,6 @@ except IOError:
     os._exit(0)
     
 
-print('\n')
 
 ip,eth,lsap,udp,tcp = False,False,False,False,False
 
@@ -466,6 +526,11 @@ for packet in data:
     print('')
 
 print_ip()
+
+#testovanie ARP
+print('')
+check_arp(False)
+check_arp(True)
 
 outputFile.close()
 
