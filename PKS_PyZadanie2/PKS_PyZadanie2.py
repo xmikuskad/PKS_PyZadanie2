@@ -2,6 +2,7 @@ import struct
 import socket
 from scapy.all import *
 import os
+import sys
 
 ip_array = list()
 ip_count = list()
@@ -12,6 +13,8 @@ lsap_types = list()
 tcp_types = list()
 udp_types = list()
 
+arp_list = list()
+
 class DatalinkLayerProtocols:
     def __init__(self, value, name):
         self.value = int(value,0)
@@ -21,27 +24,38 @@ class IPProtocol:
     def __init__(self, value, type, name):
         self.value = int(value,0)
         self.IPtype = type
-        self.name = name
+        self.name = name.lower()
 
 class TcpUdpProtocols:
     def __init__(self, value,port, name):
-        self.value = int(value,0)
-        self.port = port
+        self.value = value
+        self.port = int(port)
         self.name = name
-        
+
+class ArpInfo:
+    def __init__(self,srcIp,dstIp,macAddr,order):
+        self.scrIp = srcIp
+        self.dstIp = dstIp
+        self.macAddr - macAddr
+        self.order = order
+
+class ArpCommunication:
+    def __init__(self,ip):
+        self.ip = ip
+
+    requests = list()
+    replies = list()
 
 def add_ip(ipInc):
     i=0
     for ip in ip_array:
         if(ip == ipInc):
             ip_count[i]+=1
-            #print('Zvacsujem ip {} na {}'.format(format_ip(ip),ip_count[i]))
             return
         i+=1
 
     ip_array.append(ipInc)
     ip_count.append(1)
-    #print('Pridavam ip {} s hodnotou {}'.format(format_ip(ip_array[i]),ip_count[i]))
 
 def print_ip():
     max = 0
@@ -71,138 +85,206 @@ def create_mac(b_array):
 def format_ip(ip):
     return '.'.join(map(str,ip))
 
-def unpack_icmp(raw_data):
+def unpack_icmp(raw_data,iterator):
     print('ICMP')
-    #os.system("pause")
 
-def unpack_igmp(raw_data):
+def unpack_igmp(raw_data,iterator):
     print('IGMP')
-    #os.system("pause")
 
-def unpack_tcp(raw_data):
+def unpack_tcp(raw_data,iterator):
     print('TCP')
-    #os.system("pause")
+    srcPort,dstPort = struct.unpack('! H H',raw_data[:4])
 
-def unpack_igrp(raw_data):
+    foundSrc = False
+    foundDst = False
+
+    for port in tcp_types:
+        if srcPort == port.port:
+            foundSrc = True
+            print('Zdrojový port je {} - {}'.format(srcPort,port.name))
+
+    for port in tcp_types:
+        if dstPort == port.port:
+            foundDst = True
+            print('Cieľový port je {} - {}'.format(dstPort,port.name))
+
+    if not foundSrc:
+        print('Zdrojový port je {}'.format(srcPort))
+
+    if not foundDst:
+        print('Cieľový port je {}'.format(dstPort))
+
+def unpack_igrp(raw_data,iterator):
     print('IGRP')
-    #os.system("pause")
 
-def unpack_udp(raw_data):
+def unpack_udp(raw_data,iterator):
     print('UDP')
-    #os.system("pause")
+    srcPort,dstPort = struct.unpack('! H H',raw_data[:4])
 
-def unpack_gre(raw_data):
+    foundSrc = False
+    foundDst = False
+
+
+    for port in udp_types:
+        if srcPort == port.port:
+            foundSrc = True
+            print('Zdrojový port je {} - {}'.format(srcPort,port.name))
+
+    for port in udp_types:
+        if dstPort == port.port:
+            foundDst = True
+            print('Cieľový port je {} - {}'.format(dstPort,port.name))
+
+    if not foundSrc:
+        print('Zdrojový port je {}'.format(srcPort))
+
+    if not foundDst:
+        print('Cieľový port je {}'.format(dstPort))
+
+def unpack_gre(raw_data,iterator):
     print('GRE')
-    #os.system("pause")
 
-def unpack_esp(raw_data):
+def unpack_esp(raw_data,iterator):
     print('ESP')
-    #os.system("pause")
 
-def unpack_ah(raw_data):
+def unpack_ah(raw_data,iterator):
     print('AH')
-    #os.system("pause")
 
-def unpack_skip(raw_data):
+def unpack_skip(raw_data,iterator):
     print('SKIP')
-    #os.system("pause")
 
-def unpack_eigrp(raw_data):
+def unpack_eigrp(raw_data,iterator):
     print('EIGRP')
-    #os.system("pause")
 
-def unpack_ospf(raw_data):
+def unpack_ospf(raw_data,iterator):
     print('OSPF')
-    #os.system("pause")
 
-def unpack_l2tp(raw_data):
+def unpack_l2tp(raw_data,iterator):
     print('L2TP')
-    #os.system("pause")
 
-def unpack_ipv4(raw_data):
+def unpack_ipv4(raw_data,iterator):
     print('IPV4')
     a=raw_data[0];
     mask = 0b00001111
     length = mask & a
     length*=4
-    protokol,src_ip,target_ip = struct.unpack('! 9x B 2x 4s 4s',raw_data[:20])
-    #print('\tProtokol: {} Src IP: {} Destination IP: {}'.format(protokol,format_ip(src_ip),format_ip(target_ip)))
+    protokol_num,src_ip,target_ip = struct.unpack('! 9x B 2x 4s 4s',raw_data[:20])
     print('zdrojová IP adresa: {}'.format(format_ip(src_ip)))
     print('cieľová IP adresa: {}'.format(format_ip(target_ip)))
     add_ip(src_ip)
-    option = {
-        1:unpack_icmp,
-        2:unpack_igmp,
-        6:unpack_tcp,
-        9:unpack_igrp,
-        17:unpack_udp,
-        47:unpack_gre,
-        50:unpack_esp,
-        51:unpack_ah,
-        57:unpack_skip,
-        88:unpack_eigrp,
-        89:unpack_ospf,
-        112:unpack_l2tp,
-        }
-    option[protokol](data[length:])
 
-def unpack_arp(raw_data):
+    for protocol in ip_types:
+        if protokol_num == protocol.value:
+            func_name = 'unpack_'+protocol.name
+
+            functions = globals().copy()
+            functions.update(locals())
+            call_func = functions.get(func_name)
+
+            if not call_func:
+                print('Nepoznam funkciu v ipv4 '+func_name)
+                raise Exception('Missing method')
+            #Overit, ci sa length dobre pocita!
+            call_func(raw_data[length:],iterator)
+            return
+
+    print('Nenasiel som prislusny protokol {} v zozname'.format(protokol_num))
+
+def unpack_xerox(raw_data,iterator):
+    print('XEROX PUP')
+
+def unpack_pup(raw_data,iterator):
+    print('PUP Addr Trans')
+
+def unpack_arp(raw_data,iterator):
     print('ARP')
-    #os.system("pause")
+    print('{}'.format(iterator))
+    tmp,operation,srcMac,srcIp,dstMac,dstIp = struct.unpack('! 6s H 6s 4s 6s 4s',raw_data[:28])
+    print('operation {}, srcMac {}, srcIP {}, dstMac {}, dstIp {}'.format(operation,create_mac(srcMac),format_ip(srcIp),create_mac(dstMac),format_ip(dstIp)))
 
-def unpack_x75(raw_data):
-    printf('X75')
-    #os.system("pause")
+def unpack_x75internet(raw_data,iterator):
+    print('X.75 Internet')
 
-def unpack_x25(raw_data):
-    printf('X25')
-    #os.system("pause")
+def unpack_x25internet(raw_data,iterator):
+    print('X.25 Internet')
 
-def unpack_rarp(raw_data):
-    printf("REVERSE ARP")
-    #os.system("pause")
+def unpack_rarp(raw_data,iterator):
+    print("Reverse ARP")
 
-def unpack_atalk(raw_data):
-    print('ATALK')
-    #os.system("pause")
+def unpack_appletalk(raw_data,iterator):
+    print('AppleTalk')
 
-def unpack_atalka(raw_data):
-    print('ATALK A')
-    #os.system("pause")
+def unpack_appletalkaarp(raw_data,iterator):
+    print('AppleTalk AARP')
 
-def unpack_etIEEE(raw_data):
-    print('etherhet IEEE')
-    #os.system("pause")
+def unpack_ieee(raw_data,iterator):
+    print('IEEE 802.1Q')
 
-def unpack_novell(raw_data):
-    print('NOVELL')
-    #os.system("pause")
+def unpack_novellipx(raw_data,iterator):
+    print('NOVELL IPX')
 
-def unpack_ipv6(raw_data):
-    print('IPV6')
-    #os.system("pause")
+def unpack_ipv6(raw_data,iterator):
+    print('IPv6')
 
-def unpack_ppp(raw_data):
+def unpack_ppp(raw_data,iterator):
     print('PPP')
-    #os.system("pause")
 
-def unpack_mpls(raw_data):
+def unpack_mpls(raw_data,iterator):
     print('MPLS')
-    #os.system("pause")
 
-def unpack_mpls2(raw_data):
-    print('MPLS2')
-    #os.system("pause")
+def unpack_mpls2(raw_data,iterator):
+    print('MPLS with upstream-assigned label')
 
-def unpack_pppoe(raw_data):
-    print('PPPOE')
-    #os.system("pause")
+def unpack_pppoed(raw_data,iterator):
+    print('PPPOE Discovery Stage')
 
-def unpack_pppoe2(raw_data):
-    printf("PPPOE 2")
-    #os.system("pause")
+def unpack_pppoeS(raw_data,iterator):
+    print("PPPOE Session Stage")
 
-def unpack_ethernet(raw_data):
+def unpack_nullsap(raw_data,iterator):
+    print('Null Sap')
+
+def unpack_llcsmi(raw_data,iterator):
+    print('LLC Sublayer Management / Individual')
+
+def unpack_llcsmg(raw_data,iterator):
+    print('LLC Sublayer Management / Group')
+
+def unpack_ip(raw_data,iterator):
+    print('IP (DOD Internet Protocol)')
+
+def unpack_prowaynmmi(raw_data,iterator):
+    print('PROWAY Network management, Maintenance and Installation')
+
+def unpack_stp(raw_data,iterator):
+    print('Spanning tree')
+
+def unpack_mms(raw_data,iterator):
+    print('MMS EIA-RS 511')
+
+def unpack_isiip(raw_data,iterator):
+    print('ISI IP')
+
+def unpack_x25plp(raw_data,iterator):
+    print('X.25 PLP')
+
+def unpack_prowayaslm(raw_data,iterator):
+    print('PROWAY Active Station List Maintenance')
+
+def unpack_ipx(raw_data,iterator):
+    print('IPX')
+
+def unpack_lan(raw_data,iterator):
+    print('LAN Management')
+
+def unpack_iso(raw_data,iterator):
+    print('ISO Network Layer Protocols')
+
+def unpack_dsap(raw_data,iterator):
+    print('Global DSAP')
+
+
+def unpack_ethernet(raw_data,iterator):
     print('dĺžka rámca poskytnutá pcap API - {} B'.format(len(raw_data)))
 
     if len(raw_data) <= 60:
@@ -211,45 +293,79 @@ def unpack_ethernet(raw_data):
         print('dĺžka rámca prenášaného po médiu – {} B'.format(len(raw_data)+4))
 
     d_mac,s_mac,etType,new_raw_data = get_eth_header(raw_data)
-    #print('{} {} {}'.format(len(raw_data),d_mac,s_mac))
     if etType>=1536:
         print('Ethernet II')
         print('Zdrojová MAC adresa: {}'.format(d_mac))
         print('Cieľová MAC adresa:  {}'.format(s_mac))
-        '''
-        option = {
-            2048: unpack_ipv4,
-            2049: unpack_x75,
-            2053: unpack_x25,
-            2054: unpack_arp,
-            32821: unpack_rarp,
-            32923: unpack_atalk,
-            33011: unpack_atalka,
-            33024: unpack_etIEEE,
-            33079: unpack_novell,
-            34525: unpack_ipv6,
-            34827: unpack_ppp,
-            34887: unpack_mpls,
-            34888: unpack_mpls2,
-            34915: unpack_pppoe,
-            34916: unpack_pppoe2,
-        }
-        option[int(etType)](new_raw_data)
-        '''
+
+        for protocol in eth_types:
+            if int(etType) == protocol.value:
+                func_name = 'unpack_'+protocol.name
+
+                functions = globals().copy()
+                functions.update(locals())
+                call_func = functions.get(func_name)
+
+                if not call_func:
+                    print("Nenasiel som funkciu v ethernete "+func_name)
+                    raise Exception('Missing method')
+                call_func(new_raw_data,iterator)
+                return
+
+        print('Nenasiel som prislusny protokol {} v zozname'.format(etType))
+
     elif etType<=1500:
-        etType2 = struct.unpack('! 2s',new_raw_data[:2])
-        if etType2 == 0xFFFF:
+        etType2,ehm = struct.unpack('! 2s 2s',new_raw_data[:4])
+        if etType2.hex().upper() == 'FFFF':
             print('IEEE 802.3 – Raw')
             print('Zdrojová MAC adresa: {}'.format(d_mac))
             print('Cieľová MAC adresa: {}'.format(s_mac))
-        elif etType2 == 0xAAAA:
+        elif etType2.hex().upper() == 'AAAA':
             print('IEEE 802.3 LLC + SNAP')
             print('Zdrojová MAC adresa: {}'.format(d_mac))
             print('Cieľová MAC adresa: {}'.format(s_mac))
+
+            tmp,snapType = struct.unpack('! 6s H',new_raw_data[:8]);
+
+            for protocol in eth_types:
+                if int(snapType) == protocol.value:
+                    func_name = 'unpack_'+protocol.name
+
+                    functions = globals().copy()
+                    functions.update(locals())
+                    call_func = functions.get(func_name)
+
+                    if not call_func:
+                        print("Nenasiel som funkciu v IEEE 802.3 LLC + SNAP "+func_name)
+                        raise Exception('Missing method')
+                    call_func(new_raw_data[8:],iterator)
+                    return
+
+            print('Nenasiel som prislusny protokol {} v zozname'.format(snapType))
+
         else:
             print('IEEE 802.3 LLC')
             print('Zdrojová MAC adresa: {}'.format(d_mac))
             print('Cieľová MAC adresa: {}'.format(s_mac))
+
+            tmp,llcType = struct.unpack('! B B',new_raw_data[:2]);
+
+            for protocol in lsap_types:
+                if int(llcType) == protocol.value:
+                    func_name = 'unpack_'+protocol.name
+
+                    functions = globals().copy()
+                    functions.update(locals())
+                    call_func = functions.get(func_name)
+
+                    if not call_func:
+                        print("Nenasiel som funkciu v IEEE 802.3 LLC "+func_name)
+                        raise Exception('Missing method')
+                    call_func(new_raw_data[3:],iterator)
+                    return
+
+            print('Nenasiel som prislusny protokol {} v zozname'.format(llcType))
+
 
 
 def print_frame(raw_data):
@@ -270,37 +386,52 @@ def print_frame(raw_data):
     print('\n')
                   
 
-data = rdpcap('test.pcap')
-difTypes = open('types.txt','r')
+loader = True
+while loader == True:
+    fileName = input('Zadaj meno pcap suboru na otvorenie: ')
+    try:
+        data = rdpcap(fileName)
+        loader = False
+    except IOError:
+        print('Nenasiel som subor, skus znova')
+
+#presmerovanie vystupu do suboru
+outputFile = open('output.txt','w',encoding='utf-8')
+sys.stdout = outputFile
+
+
+try:
+    difTypes = open('types.txt','r')
+except IOError:
+    print('Subor types.txt nebol najdeny.')
+    input()
+    os._exit(0)
+    
+
+print('\n')
 
 ip,eth,lsap,udp,tcp = False,False,False,False,False
 
 for number,text in enumerate(difTypes):
-    #print("i: "+str(i));
     editedText = text.replace("\n","")
     words = editedText.split()
     if '#Eth' in words[0]:
-        print('ETHERNET')
         ip,eth,lsap, udp,tcp = False,False,False,False,False
         eth = True;
         continue;
     if '#IP' in words[0]:
-        print('IP')
         ip,eth,lsap, udp,tcp = False,False,False,False,False
         ip = True;
         continue;
     if '#TCP' in words[0]:
-        print('TCP')
         ip,eth,lsap, udp,tcp = False,False,False,False,False
         tcp = True;
         continue;
     if '#UDP' in words[0]:
-        print('UDP')
         ip,eth,lsap, udp,tcp = False,False,False,False,False
         udp = True;
         continue;
     if '#LSAP' in words[0]:
-        print('LSAP')
         ip,eth,lsap, udp,tcp = False,False,False,False,False
         lsap = True;
         continue;
@@ -311,61 +442,18 @@ for number,text in enumerate(difTypes):
     if eth:
         addedClass = DatalinkLayerProtocols(words[0],words[1])
         eth_types.append(addedClass)
-        print('{} {}'.format(addedClass.value, addedClass.name))
     elif tcp:
         addedClass = TcpUdpProtocols(words[0],words[1],words[2])
         tcp_types.append(addedClass)
-        print('{} {} {}'.format(addedClass.value, addedClass.name,addedClass.port))
     elif udp:
         addedClass = TcpUdpProtocols(words[0],words[1],words[2])
         udp_types.append(addedClass)
-        print('{} {} {}'.format(addedClass.value, addedClass.name,addedClass.port))
     elif ip:
         addedClass = IPProtocol(words[0],words[1],words[2])
         ip_types.append(addedClass)
-        print('{} {} {}'.format(addedClass.value,addedClass.IPtype ,addedClass.name))
     elif lsap:
         addedClass = DatalinkLayerProtocols(words[0],words[1])
         lsap_types.append(addedClass)
-        print('{} {}'.format(addedClass.value, addedClass.name))
-
-
-'''
-    #print(' ')
-    for k in words:
-        #print(str(m) + ': '+k);
-        if eth:
-            eth_types.append(k)
-        elif tcp:
-            tcp_types.append(k)
-        elif udp:
-            udp_types.append(k)
-        elif ip:
-            ip_types.append(k)
-        elif lsap:
-            lsap_types.append(k)
-        m+=1
-    #print('\n')
-print('\n')
-
-for item in eth_types:
-    print(item)
-print(' ')
-for item in lsap_types:
-    print(item)
-print(' ')
-for item in ip_types:
-    print(item)
-print(' ')
-for item in tcp_types:
-    print(item)
-print(' ')
-for item in udp_types:
-    print(item)
-print(' ')
-'''
-
-
 
 
 iterator=0
@@ -373,9 +461,11 @@ for packet in data:
     raw_data = raw(data[iterator])
     iterator+=1
     print('rámec {} '.format(iterator))
-    unpack_ethernet(raw_data)
+    unpack_ethernet(raw_data,iterator)
     #print_frame(raw_data)  #ZAPNUT POTOM!
     print('')
 
-#print_ip()
+print_ip()
+
+outputFile.close()
 
