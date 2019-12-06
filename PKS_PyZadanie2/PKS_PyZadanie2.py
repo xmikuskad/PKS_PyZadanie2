@@ -20,6 +20,8 @@ tftp_list = []
 
 tftp_port = -1
 
+http_list = []
+
 class DatalinkLayerProtocols:
     def __init__(self, value, name):
         self.value = int(value,0)
@@ -71,6 +73,22 @@ class TftpCommunication:
 class TftpInfo:
     def __init__(self,opcode,order):
         self.opcode = opcode
+        self.order = order
+
+class HttpCommunication:
+    def __init__(self,port):
+        self.port = port
+        self.completed = False
+        self.fin1 = False
+        self.fin2 = False
+        self.ack1 = False
+        self.ack2 = False
+        self.rst = False
+        self.First10Comm = list()
+        self.Last10Comm = list()
+
+class TcpInfo:
+    def __init__(self,order):
         self.order = order
 
 def add_ip(ipInc):
@@ -138,9 +156,57 @@ def unpack_icmp(raw_data,iterator,repeating):
 def unpack_igmp(raw_data,iterator,repeating):
     print('IGMP')
 
+def unpack_http(flags,iterator,repeating,port):
+    print('HTTP')
+
+    if repeating == True:
+        return
+
+    ack = (flags & (1<<4)) >> 4
+    fin = flags & 1
+    syn = (flags & (1<<1)) >> 1
+    rst = (flags & (1<<2)) >> 2
+
+    print('ack {} fin {} syn {} rst {}'.format(ack,fin,syn,rst))
+
+    if syn and not ack:
+        #if len(http_list) >=2:
+            #test1 = http_list
+        #else:
+        http_list.append(HttpCommunication(port))
+
+    if len(http_list) <= 0:
+        return
+
+    for leaf in http_list:
+        if leaf.port == port and leaf.completed == False:
+            if len(leaf.First10Comm) <10:
+                leaf.First10Comm.append(TcpInfo(iterator))
+            elif len(leaf.Last10Comm) <10:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+            else:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+                leaf.Last10Comm.pop(0)
+
+            if rst:
+                leaf.completed = True
+
+            if fin:
+                if not leaf.fin1:
+                    leaf.fin1 = True
+                else:
+                    leaf.fin2 = True
+
+            if ack:
+                if leaf.fin1 and leaf.fin2:
+                    leaf.completed = True
+
+        return
+
+
 def unpack_tcp(raw_data,iterator,repeating):
     print('TCP')
-    srcPort,dstPort = struct.unpack('! H H',raw_data[:4])
+    srcPort,dstPort,tmp,flags = struct.unpack('! H H 9s B ',raw_data[:14])
 
     foundSrc = False
     foundDst = False
@@ -149,11 +215,15 @@ def unpack_tcp(raw_data,iterator,repeating):
         if srcPort == port.port:
             foundSrc = True
             print('Zdrojový port je {} - {}'.format(srcPort,port.name))
+            if str.lower(port.name) == 'http':
+                unpack_http(int(flags),iterator,repeating,dstPort)
 
     for port in tcp_types:
         if dstPort == port.port:
             foundDst = True
             print('Cieľový port je {} - {}'.format(dstPort,port.name))
+            if str.lower(port.name) == 'http':
+                unpack_http(int(flags),iterator,repeating,srcPort)
 
     if not foundSrc:
         print('Zdrojový port je {}'.format(srcPort))
@@ -476,6 +546,32 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
             print('Nenasiel som prislusny protokol {} v zozname'.format(llcType))
 
+
+def check_http(skipper):
+
+    for leaf in http_list:
+        if leaf.completed == skipper and len(leaf.First10Comm) > 3:
+            if skipper == True:
+                print('Prva kompletna HTTP komunikacia\n')
+            else:
+                print('Prva nekompletna HTTP komunikacia\n')    
+            
+            if len(leaf.Last10Comm) > 0:
+                print('Prvych 10 ramcov')
+            for http in leaf.First10Comm:
+                print('rámec {} '.format(http.order))
+                unpack_ethernet(raw(data[http.order-1]),http.order,True)
+                #print_frame(raw(data[http.order-1]))  #ZAPNUT POTOM!
+
+            if len(leaf.Last10Comm) > 0:        
+                print('Poslednych 10 ramcov')
+            for http in leaf.Last10Comm:
+                print('rámec {} '.format(http.order))
+                unpack_ethernet(raw(data[http.order-1]),http.order,True)
+                #print_frame(raw(data[http.order-1]))  #ZAPNUT POTOM!
+            break    
+
+
 def check_tftp():
     if len(tftp_list) > 0:
         print('TFTP Komunikacie\n')
@@ -709,5 +805,11 @@ print('--------------------------------------------------------\n')
 #vypisovanie TFTP
 check_tftp()
 print('--------------------------------------------------------\n')
+
+#vypisovanie HTTP
+check_http(True)
+check_http(False)
+print('--------------------------------------------------------\n')
+
 outputFile.close()
 
