@@ -16,6 +16,9 @@ udp_types = list()
 arp_list = []
 icmp_list = []
 icmp_fail_list = []
+tftp_list = []
+
+tftp_port = -1
 
 class DatalinkLayerProtocols:
     def __init__(self, value, name):
@@ -58,6 +61,17 @@ class IcmpCommunication:
     def __init__(self,ID):
         self.ID = ID
         self.ICMPCommunication = list()
+
+class TftpCommunication:
+    def __init__(self,port):
+        self.port = port
+        self.TFTPCommunication = list()
+        self.completed = False
+
+class TftpInfo:
+    def __init__(self,opcode,order):
+        self.opcode = opcode
+        self.order = order
 
 def add_ip(ipInc):
     i=0
@@ -152,29 +166,55 @@ def unpack_tcp(raw_data,iterator,repeating):
 def unpack_igrp(raw_data,iterator,repeating):
     print('IGRP')
 
+def unpack_tftp(raw_data,iterator,repeating):
+    print("TFPT")
+
+    if repeating == True:
+        return
+
+    global tftp_port
+    opcode,tmp = struct.unpack('! H B',raw_data[:3])
+
+    for leaf in tftp_list:
+        if tftp_port == leaf.port and leaf.completed == False:
+            leaf.TFTPCommunication.append(TftpInfo(int(opcode),iterator))
+            return
+
+    new_tftp = TftpCommunication(tftp_port)
+    new_tftp.TFTPCommunication.append(TftpInfo(int(opcode),iterator))
+    tftp_list.append(new_tftp)
+
+
 def unpack_udp(raw_data,iterator,repeating):
     print('UDP')
     srcPort,dstPort = struct.unpack('! H H',raw_data[:4])
 
     foundSrc = False
     foundDst = False
-
+    global tftp_port
 
     for port in udp_types:
         if srcPort == port.port:
             foundSrc = True
             print('Zdrojový port je {} - {}'.format(srcPort,port.name))
 
+    if not foundSrc:
+        print('Zdrojový port je {}'.format(srcPort))
+
     for port in udp_types:
         if dstPort == port.port:
             foundDst = True
             print('Cieľový port je {} - {}'.format(dstPort,port.name))
-
-    if not foundSrc:
-        print('Zdrojový port je {}'.format(srcPort))
+            if str.lower(port.name) == 'tftp':
+                tftp_port = srcPort
+                if len(tftp_list) > 0:
+                    tftp_list[len(tftp_list)-1].completed = True
 
     if not foundDst:
         print('Cieľový port je {}'.format(dstPort))
+
+    if dstPort == tftp_port or srcPort == tftp_port:
+        unpack_tftp(raw_data[8:],iterator,repeating)
 
 def unpack_gre(raw_data,iterator,repeating):
     print('GRE')
@@ -436,6 +476,34 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
             print('Nenasiel som prislusny protokol {} v zozname'.format(llcType))
 
+def check_tftp():
+    if len(tftp_list) > 0:
+        print('TFTP Komunikacie\n')
+
+    count =0
+    for leaf in tftp_list:
+        count+=1
+        print('\nKomunikacia {}\n'.format(count))
+        for tftp in leaf.TFTPCommunication:
+                print('Poradie {} opcode {}'.format(tftp.order,tftp.opcode))
+
+                if tftp.opcode == 1:
+                    print('Read request')
+                elif tftp.opcode == 2:
+                    print('Write request')
+                elif tftp.opcode == 3:
+                    print('Read or write the next block of data')
+                elif tftp.opcode == 4:
+                    print('Acknowledgment')
+                elif tftp.opcode == 5:
+                    print('Error message')
+                elif tftp.opcode == 6:
+                    print('Option acknowledgment')
+
+                print('rámec {} '.format(tftp.order))
+                unpack_ethernet(raw(data[tftp.order-1]),tftp.order,True)
+                #print_frame(raw(data[tftp.order-1]))  #ZAPNUT POTOM!
+
 def check_icmp():
     if len(icmp_list) > 0:
         print('Reply + request ICMP\n')
@@ -636,7 +704,10 @@ print('--------------------------------------------------------\n')
 
 #vypisovanie ICMP
 check_icmp()
+print('--------------------------------------------------------\n')
 
-
+#vypisovanie TFTP
+check_tftp()
+print('--------------------------------------------------------\n')
 outputFile.close()
 
