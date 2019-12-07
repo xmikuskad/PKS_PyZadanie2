@@ -21,6 +21,11 @@ tftp_list = []
 tftp_port = -1
 
 http_list = []
+ssh_list = []
+https_list = []
+telnet_list = []
+ftp_data_list = []
+ftp_control_list = []
 
 class DatalinkLayerProtocols:
     def __init__(self, value, name):
@@ -75,7 +80,7 @@ class TftpInfo:
         self.opcode = opcode
         self.order = order
 
-class HttpCommunication:
+class TcpCommunication:
     def __init__(self,port):
         self.port = port
         self.completed = False
@@ -157,8 +162,6 @@ def unpack_igmp(raw_data,iterator,repeating):
     print('IGMP')
 
 def unpack_http(flags,iterator,repeating,port):
-    print('HTTP')
-
     if repeating == True:
         return
 
@@ -167,13 +170,8 @@ def unpack_http(flags,iterator,repeating,port):
     syn = (flags & (1<<1)) >> 1
     rst = (flags & (1<<2)) >> 2
 
-    print('ack {} fin {} syn {} rst {}'.format(ack,fin,syn,rst))
-
     if syn and not ack:
-        #if len(http_list) >=2:
-            #test1 = http_list
-        #else:
-        http_list.append(HttpCommunication(port))
+        http_list.append(TcpCommunication(port))
 
     if len(http_list) <= 0:
         return
@@ -191,18 +189,212 @@ def unpack_http(flags,iterator,repeating,port):
             if rst:
                 leaf.completed = True
 
+            if ack:
+                if leaf.fin1 and leaf.fin2:
+                    leaf.completed = True
+
             if fin:
                 if not leaf.fin1:
                     leaf.fin1 = True
                 else:
                     leaf.fin2 = True
+        return
+
+
+def unpack_https(flags,iterator,repeating,port):
+    if repeating == True:
+        return
+
+    ack = (flags & (1<<4)) >> 4
+    fin = flags & 1
+    syn = (flags & (1<<1)) >> 1
+    rst = (flags & (1<<2)) >> 2
+
+    if syn and not ack:
+        https_list.append(TcpCommunication(port))
+
+    if len(https_list) <= 0:
+        return
+
+    for leaf in https_list:
+        if leaf.port == port and leaf.completed == False:
+            if len(leaf.First10Comm) <10:
+                leaf.First10Comm.append(TcpInfo(iterator))
+            elif len(leaf.Last10Comm) <10:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+            else:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+                leaf.Last10Comm.pop(0)
+
+            if rst:
+                leaf.completed = True
 
             if ack:
                 if leaf.fin1 and leaf.fin2:
                     leaf.completed = True
 
+            if fin:
+                if not leaf.fin1:
+                    leaf.fin1 = True
+                else:
+                    leaf.fin2 = True
         return
 
+def unpack_ssh(flags,iterator,repeating,port):
+    if repeating == True:
+        return
+
+    ack = (flags & (1<<4)) >> 4
+    fin = flags & 1
+    syn = (flags & (1<<1)) >> 1
+    rst = (flags & (1<<2)) >> 2
+
+    if syn and not ack:
+        ssh_list.append(TcpCommunication(port))
+
+    if len(ssh_list) <= 0:
+        return
+
+    for leaf in ssh_list:
+        if leaf.port == port and leaf.completed == False:
+            if len(leaf.First10Comm) <10:
+                leaf.First10Comm.append(TcpInfo(iterator))
+            elif len(leaf.Last10Comm) <10:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+            else:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+                leaf.Last10Comm.pop(0)
+
+            if rst:
+                leaf.completed = True
+
+            if ack:
+                if leaf.fin1 and leaf.fin2:
+                    leaf.completed = True
+
+            if fin:
+                if not leaf.fin1:
+                    leaf.fin1 = True
+                else:
+                    leaf.fin2 = True
+        return
+
+def unpack_telnet(flags,iterator,repeating,port):
+    if repeating == True:
+        return
+
+    ack = (flags & (1<<4)) >> 4
+    fin = flags & 1
+    syn = (flags & (1<<1)) >> 1
+    rst = (flags & (1<<2)) >> 2
+
+    if syn and not ack:
+        telnet_list.append(TcpCommunication(port))
+
+    if len(telnet_list) <= 0:
+        return
+
+    for leaf in telnet_list:
+        if leaf.port == port and leaf.completed == False:
+            if len(leaf.First10Comm) <10:
+                leaf.First10Comm.append(TcpInfo(iterator))
+            elif len(leaf.Last10Comm) <10:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+            else:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+                leaf.Last10Comm.pop(0)
+
+            if rst:
+                leaf.completed = True
+
+            if ack:
+                if leaf.fin1 and leaf.fin2:
+                    leaf.completed = True
+
+            if fin:
+                if not leaf.fin1:
+                    leaf.fin1 = True
+                else:
+                    leaf.fin2 = True
+        return
+
+def unpack_ftp_control(flags,iterator,repeating,port):
+    if repeating == True:
+        return
+
+    ack = (flags & (1<<4)) >> 4
+    fin = flags & 1
+    syn = (flags & (1<<1)) >> 1
+    rst = (flags & (1<<2)) >> 2
+
+    if syn and not ack:
+        ftp_control_list.append(TcpCommunication(port))
+
+    if len(ftp_control_list) <= 0:
+        return
+
+    for leaf in ftp_control_list:
+        if leaf.port == port and leaf.completed == False:
+            if len(leaf.First10Comm) <10:
+                leaf.First10Comm.append(TcpInfo(iterator))
+            elif len(leaf.Last10Comm) <10:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+            else:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+                leaf.Last10Comm.pop(0)
+
+            if rst:
+                leaf.completed = True
+
+            if ack:
+                if leaf.fin1 and leaf.fin2:
+                    leaf.completed = True
+
+            if fin:
+                if not leaf.fin1:
+                    leaf.fin1 = True
+                else:
+                    leaf.fin2 = True
+        return
+
+def unpack_ftp_data(flags,iterator,repeating,port):
+    if repeating == True:
+        return
+
+    ack = (flags & (1<<4)) >> 4
+    fin = flags & 1
+    syn = (flags & (1<<1)) >> 1
+    rst = (flags & (1<<2)) >> 2
+
+    if syn and not ack:
+        ftp_data_list.append(TcpCommunication(port))
+
+    if len(ftp_data_list) <= 0:
+        return
+
+    for leaf in ftp_data_list:
+        if leaf.port == port and leaf.completed == False:
+            if len(leaf.First10Comm) <10:
+                leaf.First10Comm.append(TcpInfo(iterator))
+            elif len(leaf.Last10Comm) <10:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+            else:
+                leaf.Last10Comm.append(TcpInfo(iterator))
+                leaf.Last10Comm.pop(0)
+
+            if rst:
+                leaf.completed = True
+
+            if ack:
+                if leaf.fin1 and leaf.fin2:
+                    leaf.completed = True
+
+            if fin:
+                if not leaf.fin1:
+                    leaf.fin1 = True
+                else:
+                    leaf.fin2 = True
+        return
 
 def unpack_tcp(raw_data,iterator,repeating):
     print('TCP')
@@ -217,6 +409,16 @@ def unpack_tcp(raw_data,iterator,repeating):
             print('Zdrojový port je {} - {}'.format(srcPort,port.name))
             if str.lower(port.name) == 'http':
                 unpack_http(int(flags),iterator,repeating,dstPort)
+            if str.lower(port.name) == 'ssh':
+                unpack_ssh(int(flags),iterator,repeating,dstPort)
+            if str.lower(port.name) == 'ftp_control':
+                unpack_ftp_control(int(flags),iterator,repeating,dstPort)
+            if str.lower(port.name) == 'telnet':
+                unpack_telnet(int(flags),iterator,repeating,dstPort)
+            if str.lower(port.name) == 'ftp_data':
+                unpack_ftp_data(int(flags),iterator,repeating,dstPort)
+            if str.lower(port.name) == 'https':
+                unpack_https(int(flags),iterator,repeating,dstPort)
 
     for port in tcp_types:
         if dstPort == port.port:
@@ -224,6 +426,16 @@ def unpack_tcp(raw_data,iterator,repeating):
             print('Cieľový port je {} - {}'.format(dstPort,port.name))
             if str.lower(port.name) == 'http':
                 unpack_http(int(flags),iterator,repeating,srcPort)
+            if str.lower(port.name) == 'ssh':
+                unpack_ssh(int(flags),iterator,repeating,srcPort)
+            if str.lower(port.name) == 'ftp_control':
+                unpack_ftp_control(int(flags),iterator,repeating,srcPort)
+            if str.lower(port.name) == 'telnet':
+                unpack_telnet(int(flags),iterator,repeating,srcPort)
+            if str.lower(port.name) == 'ftp_data':
+                unpack_ftp_data(int(flags),iterator,repeating,srcPort)
+            if str.lower(port.name) == 'https':
+                unpack_https(int(flags),iterator,repeating,srcPort)
 
     if not foundSrc:
         print('Zdrojový port je {}'.format(srcPort))
@@ -549,40 +761,157 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
 def check_http(skipper):
 
+    if skipper == True:
+        print('Prva kompletna HTTP komunikacia\n')
+    else:
+        print('\nPrva nekompletna HTTP komunikacia\n')    
+
     for leaf in http_list:
-        if leaf.completed == skipper and len(leaf.First10Comm) > 3:
-            if skipper == True:
-                print('Prva kompletna HTTP komunikacia\n')
-            else:
-                print('Prva nekompletna HTTP komunikacia\n')    
-            
+        if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
             if len(leaf.Last10Comm) > 0:
                 print('Prvych 10 ramcov')
             for http in leaf.First10Comm:
                 print('rámec {} '.format(http.order))
                 unpack_ethernet(raw(data[http.order-1]),http.order,True)
-                #print_frame(raw(data[http.order-1]))  #ZAPNUT POTOM!
+                print_frame(raw(data[http.order-1]))  #ZAPNUT POTOM!
 
             if len(leaf.Last10Comm) > 0:        
-                print('Poslednych 10 ramcov')
+                print('\nPoslednych 10 ramcov')
             for http in leaf.Last10Comm:
                 print('rámec {} '.format(http.order))
                 unpack_ethernet(raw(data[http.order-1]),http.order,True)
-                #print_frame(raw(data[http.order-1]))  #ZAPNUT POTOM!
+                print_frame(raw(data[http.order-1]))  #ZAPNUT POTOM!
+            break    
+
+def check_https(skipper):
+
+    if skipper == True:
+        print('Prva kompletna HTTPS komunikacia\n')
+    else:
+        print('\nPrva nekompletna HTTPS komunikacia\n')    
+
+    for leaf in https_list:
+        if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
+            if len(leaf.Last10Comm) > 0:
+                print('Prvych 10 ramcov')
+            for https in leaf.First10Comm:
+                print('rámec {} '.format(https.order))
+                unpack_ethernet(raw(data[https.order-1]),https.order,True)
+                print_frame(raw(data[https.order-1]))  #ZAPNUT POTOM!
+
+            if len(leaf.Last10Comm) > 0:        
+                print('\nPoslednych 10 ramcov')
+            for https in leaf.Last10Comm:
+                print('rámec {} '.format(https.order))
+                unpack_ethernet(raw(data[https.order-1]),https.order,True)
+                print_frame(raw(data[https.order-1]))  #ZAPNUT POTOM!
+            break    
+
+def check_ssh(skipper):
+
+    if skipper == True:
+        print('Prva kompletna SSH komunikacia\n')
+    else:
+        print('\nPrva nekompletna SSH komunikacia\n')    
+
+    for leaf in ssh_list:
+        if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
+            if len(leaf.Last10Comm) > 0:
+                print('Prvych 10 ramcov')
+            for ssh in leaf.First10Comm:
+                print('rámec {} '.format(ssh.order))
+                unpack_ethernet(raw(data[ssh.order-1]),ssh.order,True)
+                print_frame(raw(data[ssh.order-1]))  #ZAPNUT POTOM!
+
+            if len(leaf.Last10Comm) > 0:        
+                print('\nPoslednych 10 ramcov')
+            for ssh in leaf.Last10Comm:
+                print('rámec {} '.format(ssh.order))
+                unpack_ethernet(raw(data[ssh.order-1]),ssh.order,True)
+                print_frame(raw(data[ssh.order-1]))  #ZAPNUT POTOM!
             break    
 
 
+def check_telnet(skipper):
+
+    if skipper == True:
+        print('Prva kompletna TELNET komunikacia\n')
+    else:
+        print('\nPrva nekompletna TELNET komunikacia\n')    
+
+    for leaf in telnet_list:
+        if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
+            if len(leaf.Last10Comm) > 0:
+                print('Prvych 10 ramcov')
+            for telnet in leaf.First10Comm:
+                print('rámec {} '.format(telnet.order))
+                unpack_ethernet(raw(data[telnet.order-1]),telnet.order,True)
+                print_frame(raw(data[telnet.order-1]))  #ZAPNUT POTOM!
+
+            if len(leaf.Last10Comm) > 0:        
+                print('\nPoslednych 10 ramcov')
+            for ssh in leaf.Last10Comm:
+                print('rámec {} '.format(telnet.order))
+                unpack_ethernet(raw(data[telnet.order-1]),telnet.order,True)
+                print_frame(raw(data[telnet.order-1]))  #ZAPNUT POTOM!
+            break    
+
+def check_ftp_control(skipper):
+
+    if skipper == True:
+        print('Prva kompletna FTP riadiaca komunikacia\n')
+    else:
+        print('\nPrva nekompletna FTP riadiaca komunikacia\n')    
+
+    for leaf in ftp_control_list:
+        if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
+            if len(leaf.Last10Comm) > 0:
+                print('Prvych 10 ramcov')
+            for ftp_control in leaf.First10Comm:
+                print('rámec {} '.format(ftp_control.order))
+                unpack_ethernet(raw(data[ftp_control.order-1]),ftp_control.order,True)
+                print_frame(raw(data[ftp_control.order-1]))  #ZAPNUT POTOM!
+
+            if len(leaf.Last10Comm) > 0:        
+                print('\nPoslednych 10 ramcov')
+            for ftp_control in leaf.Last10Comm:
+                print('rámec {} '.format(ftp_control.order))
+                unpack_ethernet(raw(data[ftp_control.order-1]),ftp_control.order,True)
+                print_frame(raw(data[ftp_control.order-1]))  #ZAPNUT POTOM!
+            break    
+
+def check_ftp_data(skipper):
+
+    if skipper == True:
+        print('Prva kompletna FTP datova komunikacia\n')
+    else:
+        print('\nPrva nekompletna FTP datova komunikacia\n')    
+
+    for leaf in ftp_data_list:
+        if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
+            if len(leaf.Last10Comm) > 0:
+                print('Prvych 10 ramcov')
+            for ftp_data in leaf.First10Comm:
+                print('rámec {} '.format(ftp_data.order))
+                unpack_ethernet(raw(data[ftp_data.order-1]),ftp_data.order,True)
+                print_frame(raw(data[ftp_data.order-1]))  #ZAPNUT POTOM!
+
+            if len(leaf.Last10Comm) > 0:        
+                print('\nPoslednych 10 ramcov')
+            for ftp_data in leaf.Last10Comm:
+                print('rámec {} '.format(ftp_data.order))
+                unpack_ethernet(raw(data[ftp_data.order-1]),ftp_data.order,True)
+                print_frame(raw(data[ftp_data.order-1]))  #ZAPNUT POTOM!
+            break    
+
 def check_tftp():
-    if len(tftp_list) > 0:
-        print('TFTP Komunikacie\n')
+    print('TFTP Komunikacie\n')
 
     count =0
     for leaf in tftp_list:
         count+=1
         print('\nKomunikacia {}\n'.format(count))
         for tftp in leaf.TFTPCommunication:
-                print('Poradie {} opcode {}'.format(tftp.order,tftp.opcode))
-
                 if tftp.opcode == 1:
                     print('Read request')
                 elif tftp.opcode == 2:
@@ -598,11 +927,10 @@ def check_tftp():
 
                 print('rámec {} '.format(tftp.order))
                 unpack_ethernet(raw(data[tftp.order-1]),tftp.order,True)
-                #print_frame(raw(data[tftp.order-1]))  #ZAPNUT POTOM!
+                print_frame(raw(data[tftp.order-1]))  #ZAPNUT POTOM!
 
 def check_icmp():
-    if len(icmp_list) > 0:
-        print('Reply + request ICMP\n')
+    print('Reply + request ICMP\n')
 
     for leaf in icmp_list:
         print('\nICMP identifier {}\n'.format(leaf.ID))
@@ -625,10 +953,9 @@ def check_icmp():
                 print('Address Mask reply')
             print('rámec {} '.format(icmp.order))
             unpack_ethernet(raw(data[icmp.order-1]),icmp.order,True)
-            #print_frame(raw(data[icmp.order-1]))  #ZAPNUT POTOM!
+            print_frame(raw(data[icmp.order-1]))  #ZAPNUT POTOM!
 
-    if len(icmp_fail_list) > 0:
-        print('\n\nOstatne ICMP\n')
+    print('\nOstatne ICMP\n')
 
     for leaf in icmp_fail_list:
         if leaf.type == 3:
@@ -650,23 +977,20 @@ def check_icmp():
 
         print('rámec {} '.format(leaf.order))
         unpack_ethernet(raw(data[leaf.order-1]),leaf.order,True)
-        #print_frame(raw(data[leaf.order-1]))  #ZAPNUT POTOM!
+        print_frame(raw(data[leaf.order-1]))  #ZAPNUT POTOM!
 
 def check_arp(skipper):
     counter = 1
-    info_shown = False
+
+    if skipper == True:
+        print("\nNeuplne ARP komunikacie\n")
+    else:
+        print('Uplne ARP komunikacie\n')
 
     for item in arp_list:
 
         if item.completed == skipper:
             continue
-
-        if info_shown == False:
-            info_shown = True
-            if skipper == True:
-                print("Neuplne ARP komunikacie\n")
-            else:
-                print('Uplne ARP komunikacie\n')
 
         if item.completed == True:
             print('Komunikacia {}'.format(counter))
@@ -678,7 +1002,7 @@ def check_arp(skipper):
                 print('Zdrojova IP: {}, Cielova IP: {}'.format(request.srcIp,request.dstIp))
                 print('rámec {} '.format(request.order))
                 unpack_ethernet(raw(data[request.order-1]),request.order,True)
-                #print_frame(raw(data[request.order-1]))  #ZAPNUT POTOM!
+                print_frame(raw(data[request.order-1]))  #ZAPNUT POTOM!
 
         print('')
 
@@ -688,7 +1012,7 @@ def check_arp(skipper):
                 print('Zdrojova IP: {}, Cielova IP: {}'.format(reply.srcIp,reply.dstIp))
                 print('rámec {} '.format(reply.order))
                 unpack_ethernet(raw(data[reply.order-1]),reply.order,True)
-                #print_frame(raw(data[reply.order-1]))  #ZAPNUT POTOM!
+                print_frame(raw(data[reply.order-1]))  #ZAPNUT POTOM!
 
 
 def print_frame(raw_data):
@@ -785,7 +1109,7 @@ for packet in data:
     iterator+=1
     print('rámec {} '.format(iterator))
     unpack_ethernet(raw_data,iterator,False)
-    #print_frame(raw_data)  #ZAPNUT POTOM!
+    print_frame(raw_data)  #ZAPNUT POTOM!
     print('')
 
 print('--------------------------------------------------------\n')
@@ -810,6 +1134,32 @@ print('--------------------------------------------------------\n')
 check_http(True)
 check_http(False)
 print('--------------------------------------------------------\n')
+
+#vypisovanie SSH
+check_ssh(True)
+check_ssh(False)
+print('--------------------------------------------------------\n')
+
+#vypisovanie FTP CONTROL
+check_ftp_control(True)
+check_ftp_control(False)
+print('--------------------------------------------------------\n')
+
+#vypisovanie TELNET
+check_telnet(True)
+check_telnet(False)
+print('--------------------------------------------------------\n')
+
+#vypisovanie FTP DATA
+check_ftp_data(True)
+check_ftp_data(False)
+print('--------------------------------------------------------\n')
+
+#vypisovanie HTTPS
+check_https(True)
+check_https(False)
+print('--------------------------------------------------------\n')
+
 
 outputFile.close()
 
