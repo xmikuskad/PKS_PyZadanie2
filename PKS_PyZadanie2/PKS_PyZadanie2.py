@@ -542,8 +542,7 @@ def unpack_ipv4(raw_data,iterator,repeating):
 
             if not call_func:
                 print('Nepoznam funkciu v ipv4 '+func_name)
-                raise Exception('Missing method')
-            #Overit, ci sa length dobre pocita!
+                #raise Exception('Missing method')
             call_func(raw_data[length:],iterator,repeating)
             return
 
@@ -698,7 +697,7 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
                 if not call_func:
                     print("Nenasiel som funkciu v ethernete "+func_name)
-                    raise Exception('Missing method')
+                    #raise Exception('Missing method')
                 call_func(new_raw_data,iterator,repeating)
                 return
 
@@ -728,7 +727,7 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
                     if not call_func:
                         print("Nenasiel som funkciu v IEEE 802.3 LLC + SNAP "+func_name)
-                        raise Exception('Missing method')
+                        #raise Exception('Missing method')
                     call_func(new_raw_data[8:],iterator,repeating)
                     return
 
@@ -752,7 +751,7 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
                     if not call_func:
                         print("Nenasiel som funkciu v IEEE 802.3 LLC "+func_name)
-                        raise Exception('Missing method')
+                        #raise Exception('Missing method')
                     call_func(new_raw_data[3:],iterator,repeating)
                     return
 
@@ -859,9 +858,9 @@ def check_telnet(skipper):
 def check_ftp_control(skipper):
 
     if skipper == True:
-        print('Prva kompletna FTP riadiaca komunikacia\n')
+        print('Prva kompletna riadiaca FTP komunikacia\n')
     else:
-        print('\nPrva nekompletna FTP riadiaca komunikacia\n')    
+        print('\nPrva nekompletna riadiaca FTP komunikacia\n')    
 
     for leaf in ftp_control_list:
         if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
@@ -883,9 +882,9 @@ def check_ftp_control(skipper):
 def check_ftp_data(skipper):
 
     if skipper == True:
-        print('Prva kompletna FTP datova komunikacia\n')
+        print('Prva kompletna datova FTP komunikacia\n')
     else:
-        print('\nPrva nekompletna FTP datova komunikacia\n')    
+        print('\nPrva nekompletna datova FTP komunikacia\n')    
 
     for leaf in ftp_data_list:
         if leaf.completed == skipper and len(leaf.First10Comm) > 3:            
@@ -1117,22 +1116,19 @@ print('--------------------------------------------------------\n')
 print_ip()
 print('\n--------------------------------------------------------\n')
 
-#vypisovanie ARP
-check_arp(False)
-check_arp(True)
-print('--------------------------------------------------------\n')
-
-#vypisovanie ICMP
-check_icmp()
-print('--------------------------------------------------------\n')
-
-#vypisovanie TFTP
-check_tftp()
-print('--------------------------------------------------------\n')
-
 #vypisovanie HTTP
 check_http(True)
 check_http(False)
+print('--------------------------------------------------------\n')
+
+#vypisovanie HTTPS
+check_https(True)
+check_https(False)
+print('--------------------------------------------------------\n')
+
+#vypisovanie TELNET
+check_telnet(True)
+check_telnet(False)
 print('--------------------------------------------------------\n')
 
 #vypisovanie SSH
@@ -1145,21 +1141,23 @@ check_ftp_control(True)
 check_ftp_control(False)
 print('--------------------------------------------------------\n')
 
-#vypisovanie TELNET
-check_telnet(True)
-check_telnet(False)
-print('--------------------------------------------------------\n')
-
 #vypisovanie FTP DATA
 check_ftp_data(True)
 check_ftp_data(False)
 print('--------------------------------------------------------\n')
 
-#vypisovanie HTTPS
-check_https(True)
-check_https(False)
+#vypisovanie TFTP
+check_tftp()
+print('--------------------------------------------------------\n')
+
+#vypisovanie ICMP
+check_icmp()
+print('--------------------------------------------------------\n')
+
+#vypisovanie ARP
+check_arp(False)
+check_arp(True)
 print('--------------------------------------------------------\n')
 
 
 outputFile.close()
-
