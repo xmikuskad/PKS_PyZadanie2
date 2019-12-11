@@ -154,12 +154,7 @@ def unpack_icmp(raw_data,iterator,repeating):
         new_communication.ICMPCommunication.append(IcmpInfo(int(msg_type),iterator))
         icmp_list.append(new_communication)
     else:
-        icmp_fail_list.append(IcmpInfo(int(msg_type),iterator))
-    
-
-
-def unpack_igmp(raw_data,iterator,repeating):
-    print('IGMP')
+        icmp_fail_list.append(IcmpInfo(int(msg_type),iterator))    
 
 def unpack_http(flags,iterator,repeating,port):
     if repeating == True:
@@ -443,11 +438,6 @@ def unpack_tcp(raw_data,iterator,repeating):
     if not foundDst:
         print('Cieľový port je {}'.format(dstPort))
 
-    #dorobit komunikacie
-
-def unpack_igrp(raw_data,iterator,repeating):
-    print('IGRP')
-
 def unpack_tftp(raw_data,iterator,repeating):
     print("TFPT")
 
@@ -498,27 +488,6 @@ def unpack_udp(raw_data,iterator,repeating):
     if dstPort == tftp_port or srcPort == tftp_port:
         unpack_tftp(raw_data[8:],iterator,repeating)
 
-def unpack_gre(raw_data,iterator,repeating):
-    print('GRE')
-
-def unpack_esp(raw_data,iterator,repeating):
-    print('ESP')
-
-def unpack_ah(raw_data,iterator,repeating):
-    print('AH')
-
-def unpack_skip(raw_data,iterator,repeating):
-    print('SKIP')
-
-def unpack_eigrp(raw_data,iterator,repeating):
-    print('EIGRP')
-
-def unpack_ospf(raw_data,iterator,repeating):
-    print('OSPF')
-
-def unpack_l2tp(raw_data,iterator,repeating):
-    print('L2TP')
-
 def unpack_ipv4(raw_data,iterator,repeating):
     print('IPV4')
     a=raw_data[0];
@@ -534,30 +503,27 @@ def unpack_ipv4(raw_data,iterator,repeating):
 
     for protocol in ip_types:
         if protokol_num == protocol.value:
+            name = protocol.name
             func_name = 'unpack_'+protocol.name
 
             functions = globals().copy()
             functions.update(locals())
             call_func = functions.get(func_name)
 
-            if not call_func:
-                print('Nepoznam funkciu v ipv4 '+func_name)
-                #raise Exception('Missing method')
-            call_func(raw_data[length:],iterator,repeating)
-            return
+            if call_func:
+                call_func(raw_data[length:],iterator,repeating)
+                return
 
-    print('Nenasiel som prislusny protokol {} v zozname'.format(protokol_num))
-
-def unpack_xerox(raw_data,iterator,repeating):
-    print('XEROX PUP')
-
-def unpack_pup(raw_data,iterator,repeating):
-    print('PUP Addr Trans')
+    try:
+        name
+    except NameError:
+        print('Nepoznam protokol {}'.format(protokol_num))
+    else:
+        print(name.upper())
 
 def unpack_arp(raw_data,iterator,repeating):
     print('ARP')
     tmp,operation,srcMac,srcIp,dstMac,dstIp = struct.unpack('! 6s H 6s 4s 6s 4s',raw_data[:28])
-    #print('operation {}, srcMac {}, srcIP {}, dstMac {}, dstIp {}'.format(operation,create_mac(srcMac),format_ip(srcIp),create_mac(dstMac),format_ip(dstIp)))
 
     if repeating == True:
         return
@@ -589,89 +555,6 @@ def unpack_arp(raw_data,iterator,repeating):
         newArp.ARPreplies.append(ArpInfo(format_ip(srcIp),format_ip(dstIp),create_mac(srcMac),create_mac(dstMac),iterator))
         arp_list.append(newArp)
 
-
-def unpack_x75internet(raw_data,iterator,repeating):
-    print('X.75 Internet')
-
-def unpack_x25internet(raw_data,iterator,repeating):
-    print('X.25 Internet')
-
-def unpack_rarp(raw_data,iterator,repeating):
-    print("Reverse ARP")
-
-def unpack_appletalk(raw_data,iterator,repeating):
-    print('AppleTalk')
-
-def unpack_appletalkaarp(raw_data,iterator,repeating):
-    print('AppleTalk AARP')
-
-def unpack_ieee(raw_data,iterator,repeating):
-    print('IEEE 802.1Q')
-
-def unpack_novellipx(raw_data,iterator,repeating):
-    print('NOVELL IPX')
-
-def unpack_ipv6(raw_data,iterator,repeating):
-    print('IPv6')
-
-def unpack_ppp(raw_data,iterator,repeating):
-    print('PPP')
-
-def unpack_mpls(raw_data,iterator,repeating):
-    print('MPLS')
-
-def unpack_mpls2(raw_data,iterator,repeating):
-    print('MPLS with upstream-assigned label')
-
-def unpack_pppoed(raw_data,iterator,repeating):
-    print('PPPOE Discovery Stage')
-
-def unpack_pppoeS(raw_data,iterator,repeating):
-    print("PPPOE Session Stage")
-
-def unpack_nullsap(raw_data,iterator,repeating):
-    print('Null Sap')
-
-def unpack_llcsmi(raw_data,iterator,repeating):
-    print('LLC Sublayer Management / Individual')
-
-def unpack_llcsmg(raw_data,iterator,repeating):
-    print('LLC Sublayer Management / Group')
-
-def unpack_ip(raw_data,iterator,repeating):
-    print('IP (DOD Internet Protocol)')
-
-def unpack_prowaynmmi(raw_data,iterator,repeating):
-    print('PROWAY Network management, Maintenance and Installation')
-
-def unpack_stp(raw_data,iterator,repeating):
-    print('Spanning tree')
-
-def unpack_mms(raw_data,iterator,repeating):
-    print('MMS EIA-RS 511')
-
-def unpack_isiip(raw_data,iterator,repeating):
-    print('ISI IP')
-
-def unpack_x25plp(raw_data,iterator,repeating):
-    print('X.25 PLP')
-
-def unpack_prowayaslm(raw_data,iterator,repeating):
-    print('PROWAY Active Station List Maintenance')
-
-def unpack_ipx(raw_data,iterator,repeating):
-    print('IPX')
-
-def unpack_lan(raw_data,iterator,repeating):
-    print('LAN Management')
-
-def unpack_iso(raw_data,iterator,repeating):
-    print('ISO Network Layer Protocols')
-
-def unpack_dsap(raw_data,iterator,repeating):
-    print('Global DSAP')
-
-
 def unpack_ethernet(raw_data,iterator,repeating):
     print('dĺžka rámca poskytnutá pcap API - {} B'.format(len(raw_data)))
 
@@ -689,19 +572,23 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
         for protocol in eth_types:
             if int(etType) == protocol.value:
+                name = protocol.name
                 func_name = 'unpack_'+protocol.name
 
                 functions = globals().copy()
                 functions.update(locals())
                 call_func = functions.get(func_name)
 
-                if not call_func:
-                    print("Nenasiel som funkciu v ethernete "+func_name)
-                    #raise Exception('Missing method')
-                call_func(new_raw_data,iterator,repeating)
-                return
+                if call_func:
+                    call_func(new_raw_data,iterator,repeating)
+                    return
 
-        print('Nenasiel som prislusny protokol {} v zozname'.format(etType))
+        try:
+            name
+        except NameError:
+            print('Nepoznam protokol {}'.format(etType))
+        else:
+            print(name.upper())
 
     elif etType<=1500:
         etType2,ehm = struct.unpack('! 2s 2s',new_raw_data[:4])
@@ -719,19 +606,23 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
             for protocol in eth_types:
                 if int(snapType) == protocol.value:
+                    name = protocol.name
                     func_name = 'unpack_'+protocol.name
 
                     functions = globals().copy()
                     functions.update(locals())
                     call_func = functions.get(func_name)
 
-                    if not call_func:
-                        print("Nenasiel som funkciu v IEEE 802.3 LLC + SNAP "+func_name)
-                        #raise Exception('Missing method')
-                    call_func(new_raw_data[8:],iterator,repeating)
-                    return
+                    if call_func:
+                        call_func(new_raw_data[8:],iterator,repeating)
+                        return
 
-            print('Nenasiel som prislusny protokol {} v zozname'.format(snapType))
+            try:
+                name
+            except NameError:
+                print('Nepoznam protokol {}'.format(snapType))
+            else:
+                print(name.upper())
 
         else:
             print('IEEE 802.3 LLC')
@@ -743,19 +634,23 @@ def unpack_ethernet(raw_data,iterator,repeating):
 
             for protocol in lsap_types:
                 if int(llcType) == protocol.value:
+                    name = protocol.name
                     func_name = 'unpack_'+protocol.name
 
                     functions = globals().copy()
                     functions.update(locals())
                     call_func = functions.get(func_name)
 
-                    if not call_func:
-                        print("Nenasiel som funkciu v IEEE 802.3 LLC "+func_name)
-                        #raise Exception('Missing method')
-                    call_func(new_raw_data[3:],iterator,repeating)
-                    return
+                    if call_func:
+                        call_func(new_raw_data[3:],iterator,repeating)
+                        return
 
-            print('Nenasiel som prislusny protokol {} v zozname'.format(llcType))
+            try:
+                name
+            except NameError:
+                print('Nepoznam protokol {}'.format(llcType))
+            else:
+                print(name.upper())
 
 
 def check_http(skipper):
@@ -1110,6 +1005,11 @@ for packet in data:
     unpack_ethernet(raw_data,iterator,False)
     print_frame(raw_data)  #ZAPNUT POTOM!
     print('')
+
+outputFile.close()
+outputFile = open('outputOther.txt','w',encoding='utf-8')
+sys.stdout = outputFile
+
 
 print('--------------------------------------------------------\n')
 #vypisanie top IP adries
