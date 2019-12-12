@@ -146,7 +146,7 @@ def unpack_icmp(raw_data,iterator,repeating):
     if int(msg_type) == 0 or int(msg_type) == 8 or int(msg_type) ==13 or int(msg_type) ==14 or int(msg_type) ==15 or int(msg_type) ==16 or int(msg_type) ==17 or int(msg_type) ==18:
         tmp,id = struct.unpack('! 4s H',raw_data[:6])
         for leaf in icmp_list:
-            if leaf.ID == id:
+            if int(leaf.ID) == int(id):
                 leaf.ICMPCommunication.append(IcmpInfo(int(msg_type),iterator))
                 return
 
@@ -805,30 +805,64 @@ def check_tftp():
     for leaf in tftp_list:
         count+=1
         print('\nKomunikacia {}\n'.format(count))
-        for tftp in leaf.TFTPCommunication:
-                if tftp.opcode == 1:
-                    print('Read request')
-                elif tftp.opcode == 2:
-                    print('Write request')
-                elif tftp.opcode == 3:
-                    print('Read or write the next block of data')
-                elif tftp.opcode == 4:
-                    print('Acknowledgment')
-                elif tftp.opcode == 5:
-                    print('Error message')
-                elif tftp.opcode == 6:
-                    print('Option acknowledgment')
+        if len(leaf.TFTPCommunication) > 10:
+            print('Prvych 10 ramcov')
 
-                print('rámec {} '.format(tftp.order))
-                unpack_ethernet(raw(data[tftp.order-1]),tftp.order,True)
-                print_frame(raw(data[tftp.order-1]))  #ZAPNUT POTOM!
+        index = 0
+        show = False
+        while index < len(leaf.TFTPCommunication):
+
+            if index > 9 and index <= len(leaf.TFTPCommunication) -11:
+                index +=1
+                continue
+
+            if index > 9 and index > len(leaf.TFTPCommunication) -11 and show == False:
+                print('\nPoslednych 10 ramcov')
+                show = True
+
+            tftp = leaf.TFTPCommunication[index]
+            if tftp.opcode == 1:
+                print('Read request')
+            elif tftp.opcode == 2:
+                print('Write request')
+            elif tftp.opcode == 3:
+                print('Read or write the next block of data')
+            elif tftp.opcode == 4:
+                print('Acknowledgment')
+            elif tftp.opcode == 5:
+                print('Error message')
+            elif tftp.opcode == 6:
+                print('Option acknowledgment')
+
+            print('rámec {} '.format(tftp.order))
+            unpack_ethernet(raw(data[tftp.order-1]),tftp.order,True)
+            print_frame(raw(data[tftp.order-1]))  #ZAPNUT POTOM!
+
+            index+=1
 
 def check_icmp():
     print('Reply + request ICMP\n')
 
+
     for leaf in icmp_list:
         print('\nICMP identifier {}\n'.format(leaf.ID))
-        for icmp in leaf.ICMPCommunication:
+
+        if len(leaf.ICMPCommunication) > 10:
+            print('Prvych 10 ramcov')
+
+        index = 0
+        show = False
+        while index < len(leaf.ICMPCommunication):
+
+            if index > 9 and index <= len(leaf.ICMPCommunication) -11:
+                index +=1
+                continue
+
+            if index > 9 and index > len(leaf.ICMPCommunication) -11 and show == False:
+                print('\nPoslednych 10 ramcov')
+                show = True
+
+            icmp = leaf.ICMPCommunication[index]
             if icmp.type == 0:
                 print('ICMP - Echo reply')
             elif icmp.type == 8:
@@ -848,6 +882,10 @@ def check_icmp():
             print('rámec {} '.format(icmp.order))
             unpack_ethernet(raw(data[icmp.order-1]),icmp.order,True)
             print_frame(raw(data[icmp.order-1]))  #ZAPNUT POTOM!
+
+            index+=1
+
+
 
     print('\nOstatne ICMP\n')
 
@@ -889,25 +927,117 @@ def check_arp(skipper):
         if item.completed == True:
             print('Komunikacia {}'.format(counter))
             counter+=1
+        else:
+            print('Nova neuplna komunikacia\n')
 
-        if len(item.ARPrequests) > 0:
-            for request in item.ARPrequests:
-                print('ARP-Request, IP adresa {}, MAC adresa: ???'.format(item.ip))
-                print('Zdrojova IP: {}, Cielova IP: {}'.format(request.srcIp,request.dstIp))
-                print('rámec {} '.format(request.order))
-                unpack_ethernet(raw(data[request.order-1]),request.order,True)
-                print_frame(raw(data[request.order-1]))  #ZAPNUT POTOM!
+        max_length = len(item.ARPrequests) + len(item.ARPreplies)
 
-        print('')
+        if(max_length < 10):
+            if len(item.ARPrequests) > 0:
+                for request in item.ARPrequests:
+                    print('ARP-Request, IP adresa {}, MAC adresa: ???'.format(item.ip))
+                    print('Zdrojova IP: {}, Cielova IP: {}'.format(request.srcIp,request.dstIp))
+                    print('rámec {} '.format(request.order))
+                    unpack_ethernet(raw(data[request.order-1]),request.order,True)
+                    print_frame(raw(data[request.order-1]))  #ZAPNUT POTOM!
 
-        if len(item.ARPreplies) > 0:
-            for reply in item.ARPreplies:
-                print('ARP-Reply, IP adresa {}, MAC adresa: {}'.format(item.ip,item.ARPreplies[0].srcMac))
-                print('Zdrojova IP: {}, Cielova IP: {}'.format(reply.srcIp,reply.dstIp))
-                print('rámec {} '.format(reply.order))
-                unpack_ethernet(raw(data[reply.order-1]),reply.order,True)
-                print_frame(raw(data[reply.order-1]))  #ZAPNUT POTOM!
+            print('')
 
+            if len(item.ARPreplies) > 0:
+                for reply in item.ARPreplies:
+                    print('ARP-Reply, IP adresa {}, MAC adresa: {}'.format(item.ip,item.ARPreplies[0].srcMac))
+                    print('Zdrojova IP: {}, Cielova IP: {}'.format(reply.srcIp,reply.dstIp))
+                    print('rámec {} '.format(reply.order))
+                    unpack_ethernet(raw(data[reply.order-1]),reply.order,True)
+                    print_frame(raw(data[reply.order-1]))  #ZAPNUT POTOM!
+        else:
+            tmpIt = 1
+            index1 = 0
+            index2 =0
+            print('Prvych 10 ramcov')
+            while tmpIt <= 10:
+
+                if index1 > len(item.ARPrequests) -1:
+                    print('ARP-Reply, IP adresa {}, MAC adresa: {}'.format(item.ip,item.ARPreplies[0].srcMac))
+                    leaf = item.ARPreplies[index2]
+                    index2+=1
+                elif index2 > len(item.ARPreplies) -1:
+                    print('ARP-Request, IP adresa {}, MAC adresa: ???'.format(item.ip))
+                    leaf = item.ARPrequests[index1]
+                    index1+=1
+                else:
+                    if item.ARPrequests[index1].order < item.ARPreplies[index2].order:
+                        print('ARP-Request, IP adresa {}, MAC adresa: ???'.format(item.ip))
+                        leaf = item.ARPrequests[index1]
+                        index1+=1
+                    else:
+                        leaf = item.ARPreplies[index2]
+                        print('ARP-Reply, IP adresa {}, MAC adresa: {}'.format(item.ip,item.ARPreplies[0].srcMac))
+                        index2+=1
+
+                print('Zdrojova IP: {}, Cielova IP: {}'.format(leaf.srcIp,leaf.dstIp))
+                print('rámec {} '.format(leaf.order))
+                unpack_ethernet(raw(data[leaf.order-1]),leaf.order,True)
+                print_frame(raw(data[leaf.order-1]))  #ZAPNUT POTOM!
+
+                tmpIt+=1
+
+            tmpIt = 0
+
+            if max_length-10 < 10:
+                max_it = max_length-10
+            else:
+                max_it = 10
+
+            index1 = len(item.ARPrequests) -1
+            index2 = len(item.ARPreplies) -1
+
+            while tmpIt<max_it:
+                if index1 <0:
+                    index2-=1
+                elif index2 <0:
+                    index1-=1
+                else:
+                    if item.ARPrequests[index1].order > item.ARPreplies[index2].order:
+                        index1-=1
+                    else:
+                        index2-=1
+
+                tmpIt+=1
+
+            tmpIt = 0
+            if index1 != len(item.ARPrequests) -1 or index1 <0:
+                index1+=1
+            if index2 != len(item.ARPreplies) -1 or index2 <0:
+                index2+=1
+            print('Poslednych 10 ramcov')
+            while tmpIt <max_it:
+
+                if index1 > len(item.ARPrequests) -1:
+                    print('ARP-Reply, IP adresa {}, MAC adresa: {}'.format(item.ip,item.ARPreplies[0].srcMac))
+                    leaf = item.ARPreplies[index2]
+                    index2+=1
+                elif index2 > len(item.ARPreplies) -1:
+                    print('ARP-Request, IP adresa {}, MAC adresa: ???'.format(item.ip))
+                    leaf = item.ARPrequests[index1]
+                    index1+=1
+                else:
+                    if item.ARPrequests[index1].order < item.ARPreplies[index2].order:
+                        print('ARP-Request, IP adresa {}, MAC adresa: ???'.format(item.ip))
+                        leaf = item.ARPrequests[index1]
+                        index1+=1
+                    else:
+                        leaf = item.ARPreplies[index2]
+                        print('ARP-Reply, IP adresa {}, MAC adresa: {}'.format(item.ip,item.ARPreplies[0].srcMac))
+                        index2+=1
+
+                print('Zdrojova IP: {}, Cielova IP: {}'.format(leaf.srcIp,leaf.dstIp))
+                print('rámec {} '.format(leaf.order))
+                unpack_ethernet(raw(data[leaf.order-1]),leaf.order,True)
+                print_frame(raw(data[leaf.order-1]))  #ZAPNUT POTOM!
+
+                tmpIt+=1
+    
 
 def print_frame(raw_data):
     length = len(raw_data)
@@ -944,6 +1074,7 @@ sys.stdout = outputFile
 try:
     difTypes = open('types.txt','r')
 except IOError:
+    sys.stdout = sys.__stdout__
     print('Subor types.txt nebol najdeny.')
     input()
     os._exit(0)
